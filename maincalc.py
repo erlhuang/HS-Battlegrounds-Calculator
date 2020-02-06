@@ -5,18 +5,14 @@ import random
 twoDrops = {}
 #Account for Baron, Mama Bear, Ornery Direhorn, etc...
 specialBehaviors = {}
-deathRattles = {}
+deathRattles = {
+}
 
 #This is a dictionary of bools that keeps track of whether there's a Cobalt, if there's a 
 #Mama bear, total murlocs on board, etc. 
 playerTurn = True
 specialsOnBoard = {}
-#A doubly linked list connecting all minions on a board state 
-#Lot to implement( Logic handling for deathrattles, figuring out how to implement order, etc)
-#Deathrattle is tricky 
-#Other effects: Windfury, poison 
-#Need to keep track of tribes too? For warleader interactions, mech summons 
-#for cobalt, mech deaths for junkbot, and 
+
 class Minions():
     def __init__(self, name, attack, hp, golden, shield, poison, windfury):
         self.name = name 
@@ -35,6 +31,9 @@ class playerVar():
         self.taunts = None
         self.board = None
         self.player = None
+
+plyrClass = playerVar()
+oppClass = playerVar()
 
 def printMinion(minion):
     print(minion.name + " " + str(minion.attack) + " " \
@@ -72,63 +71,61 @@ def minionFight(attacker, receiving): #attacker, receiving are playerVars
             receivingMin.hp = 0
         else:
             receivingMin.hp = receivingMin.hp - attackingMin.attack
-    attacker.board[attacker.nextAttack] = attackingMin 
-    receiving.board[randNum] = receivingMin
     handleMinionDeaths(attackingMin, receivingMin, attacker, receiving)
     #Do some logic to trigger deathrattles and other specific behaviors later... 
 
     
-def handleMinionDeaths(playerMin, oppMin, playerBoard, opponentBoard): # --> nextAttack, nextAttack2
+def handleMinionDeaths(attkMinion, rcvMin, attkClass, rcvClass): # --> nextAttack, nextAttack2
     #this also needs to handle next attack logic for deaths ]
-    playerIndex = playerBoard.board.index(playerMin)
-    if playerMin.hp <= 0:
-        if(playerBoard.player):
+    playerIndex = attkClass.board.index(attkMinion)
+    if attkMinion.hp <= 0:
+        if(attkClass.player):
             print("Player's ", end=" ")
         else:
             print("Opponent's ", end=" ")
-        print(playerMin.name + " died." )
-        playerBoard.board.remove(playerMin)
+        print(attkMinion.name + " died." )
+        attkClass.board.remove(attkMinion)
     else:
-        playerBoard.nextAttack = playerIndex + 1 % len(playerBoard.board)
-    if oppMin.hp <= 0:
-        if(opponentBoard.player):
+        attkClass.nextAttack = playerIndex + 1 % len(attkClass.board)
+    if rcvMin.hp <= 0:
+        if(rcvClass.player):
             print("Player's ", end=" ")
         else:
             print("Opponent's ", end=" ")
-        print(oppMin.name + " died.")
-        opponentIndex = opponentBoard.board.index(oppMin)
-        opponentBoard.board.remove(oppMin)
-        if opponentIndex != opponentBoard.nextAttack:
-            if len(opponentBoard.board) == 0:
+        print(rcvMin.name + " died.")
+        opponentIndex = rcvClass.board.index(rcvMin)
+        rcvClass.board.remove(rcvMin)
+        if opponentIndex != rcvClass.nextAttack:
+            if len(oppClass.board) == 0:
                 return
-            opponentBoard.nextAttack = opponentBoard.nextAttack + 1 % (len(opponentBoard.board))
+            rcvClass.nextAttack = rcvClass.nextAttack + 1 % (len(rcvClass.board))
     else:
-        if len(opponentBoard.board) == 0:
+        if len(rcvClass.board) == 0:
             return
-        # opponentBoard.nextAttack = opponentBoard.nextAttack + 1 % (len(opponentBoard.board))   
+        # oppClass.nextAttack = oppClass.nextAttack + 1 % (len(oppClass.board))   
 
     
-def simulateFight(playerBoard, opponentBoard):
+def simulateFight(plyrBoard, oppBoard):
     #Player turn true means it's players turn to attack, false means it's opponents turn
     #These variables keep track of next minions in line to attack
-    playerClass = playerVar()
-    oppClass = playerVar() 
-    playerClass.board = playerBoard 
-    playerClass.player = True
-    oppClass.board = opponentBoard
+    # attkClass = playerVar()
+    # oppClass = playerVar() 
+    plyrClass.board = plyrBoard 
+    plyrClass.player = True
+    oppClass.board = oppBoard
     oppClass.player = False
-    if len(playerClass.board) == len(oppClass.board):
+    if len(plyrClass.board) == len(oppClass.board):
         if(random.randrange(1) == 0):
             playerTurn = True 
         else:
             playerTurn = False
-    elif len(playerBoard) > len(opponentBoard):
+    elif len(plyrClass.board) > len(oppClass.board):
         playerTurn = True
     else:
         playerTurn = False 
-    while len(playerClass.board) > 0 and len(oppClass.board) > 0:
+    while len(plyrClass.board) > 0 and len(oppClass.board) > 0:
         print("Board state for player: ")
-        for minion in playerClass.board:
+        for minion in plyrClass.board:
             printMinion(minion)
         print()
         print("Board state for opponent: ")
@@ -138,13 +135,13 @@ def simulateFight(playerBoard, opponentBoard):
         if playerTurn == True:
             print("Player's turn: ")
             #Must account for taunt! Have a dic of enemy taunts too?
-            minionFight(playerClass, oppClass)
+            minionFight(plyrClass, oppClass)
         else: #Means it's opponents turn to fight..
             print("Opponent's turn: ") 
-            minionFight(oppClass, playerClass)
+            minionFight(oppClass, plyrClass)
         #switch turns!
         playerTurn = not playerTurn 
-    if len(playerClass.board) > 0:
+    if len(plyrClass.board) > 0:
         print("Player won!")
     elif len(oppClass.board) > 0:
         print("Opponent won!")
@@ -157,13 +154,13 @@ def main():
     alleyCat = Minions('Alley Cat',1,1,False,False,False,False)
     alleyCat2 = Minions('Alley Cat',1,1,False,True,True,False)
     wrathw = Minions('Wrath Weaver', 10, 10, False, False, False, False)
-    playerBoard = []
-    opponentBoard = []
-    playerBoard.append(tideHunter)
-    playerBoard.append(alleyCat)
-    opponentBoard.append(alleyCat2)
-    opponentBoard.append(tideHunter2)
-    playerBoard.append(wrathw)
+    plyrClass = []
+    oppBoard = []
+    plyrClass.append(tideHunter)
+    plyrClass.append(alleyCat)
+    oppBoard.append(alleyCat2)
+    oppBoard.append(tideHunter2)
+    plyrClass.append(wrathw)
     #Edge cases to account for:
     # microbots on already existing Deathrattles 
     #making sure there is room for deathrattles and we never overflow 
@@ -174,7 +171,7 @@ def main():
         for p in jsonData:
             twoDrops[p['name']] = p
     
-    simulateFight(playerBoard, opponentBoard)
+    simulateFight(plyrClass, oppBoard)
 
 if __name__ == "__main__":
     main()
